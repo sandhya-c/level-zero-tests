@@ -366,4 +366,46 @@ LZT_TEST_F(
   if (!is_fan_supported) {
     FAIL() << "No fan handles found on any of the devices! ";
   }
-} // namespace
+
+  LZT_TEST_F(FANMODULE_TEST,
+             GivenValidFanHandleWhenCheckingMultiPointTableSupport) {
+    bool any_device_seen = false;
+    for (size_t devIdx = 0; devIdx < devices.size(); ++devIdx) {
+      auto device = devices[devIdx];
+
+      uint32_t count = lzt::get_fan_handle_count(device);
+      if (count == 0) {
+        LOG_INFO << "[Device " << devIdx << "] No fan handles found.";
+        continue;
+      }
+      any_device_seen = true;
+      auto fan_handles = lzt::get_fan_handles(device, count);
+      for (size_t fanIdx = 0; fanIdx < fan_handles.size(); ++fanIdx) {
+        auto fan_handle = fan_handles[fanIdx];
+        ASSERT_NE(nullptr, fan_handle);
+        auto properties = lzt::get_fan_properties(fan_handle);
+        const bool tableModeSupported =
+            (properties.supportedModes & (1 << ZES_FAN_SPEED_MODE_TABLE)) != 0;
+        if (tableModeSupported) {
+          if (properties.maxPoints == -1) {
+            LOG_INFO << "[Device " << devIdx << " Fan " << fanIdx
+                     << "] TABLE mode supported, maxPoints unknown.";
+          } else if (properties.maxPoints > 1) {
+            LOG_INFO << "[Device " << devIdx << " Fan " << fanIdx
+                     << "] Multi-point table supported (maxPoints="
+                     << properties.maxPoints << ").";
+          } else {
+            LOG_INFO << "[Device " << devIdx << " Fan " << fanIdx
+                     << "] TABLE mode supported, but no multi-point.";
+          }
+        } else {
+          LOG_INFO << "[Device " << devIdx << " Fan " << fanIdx
+                   << "] TABLE mode NOT supported.";
+        }
+      }
+    }
+    if (!any_device_seen) {
+      FAIL() << "No fan handles    FAIL() << " No fan handles found on any
+                    devices.";
+    }
+  } // namespace
